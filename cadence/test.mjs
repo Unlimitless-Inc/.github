@@ -29,4 +29,9 @@ const spliced = spliceReadme(readme, block);
 assert.ok(spliced.startsWith("# Top\n\n<!-- cadence:start -->") && spliced.endsWith("<!-- cadence:end -->\n\nrest\n") && !spliced.includes("old"));
 assert.throws(() => spliceReadme("no markers", block), /no cadence markers/);
 
+// Month labels never print on top of each other.
+const wide = validate({ available: true, cadence: { ...good.cadence, since: "2026-05-23", through: "2026-07-20", merged_changes: 2, active_days: 2, by_day: { "2026-05-23": 1, "2026-07-20": 1 } } });
+const xs = [...renderSvg(wide).matchAll(/<text x="(\d+)"/g)].map((m) => Number(m[1]));
+assert.ok(xs.every((x, i) => i === 0 || x - xs[i - 1] >= 3 * 14), `labels too close: ${xs}`);
+
 console.log("cadence: all checks passed");

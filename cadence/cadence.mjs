@@ -59,6 +59,7 @@ export function renderSvg(c) {
   const max = Math.max(...Object.values(c.by_day));
   const out = [];
   let lastMonth = -1;
+  const labels = [];
   for (let i = 0; i < total; i++) {
     const t = new Date(gridStart.getTime() + i * 864e5);
     const d = iso(t);
@@ -66,11 +67,16 @@ export function renderSvg(c) {
     const x = left + w * (cell + gap), y = top + dow * (cell + gap);
     if (dow === 0 && t.getUTCMonth() !== lastMonth && d >= c.since) {
       lastMonth = t.getUTCMonth();
-      out.push(`<text x="${x}" y="11" font-size="9" fill="#8b949e" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">${MONTHS[lastMonth]}</text>`);
+      labels.push({ w, x, m: lastMonth });
     }
     if (d < c.since || d > c.through) continue;
     const n = c.by_day[d] ?? 0;
     out.push(`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${colours[level(n, max)]}"><title>${d}: ${n} merged</title></rect>`);
+  }
+  // A month label within three columns of the next one would print on top of it, so the earlier one gives way.
+  for (const [i, l] of labels.entries()) {
+    if (i + 1 < labels.length && labels[i + 1].w - l.w < 3) continue;
+    out.push(`<text x="${l.x}" y="11" font-size="9" fill="#8b949e" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">${MONTHS[l.m]}</text>`);
   }
   const label = `${fmt(c.merged_changes)} changes merged into Unl's main branch from ${longDate(c.since)} to ${longDate(c.through)}, by day`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${label}"><title>${label}</title>${out.join("")}</svg>\n`;
