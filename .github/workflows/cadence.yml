@@ -1,0 +1,48 @@
+# Keeps the build's cadence on the organisation's front page current.
+#
+# It reads Unl's public cadence feed (dates and counts only), redraws profile/cadence.svg and the counts in
+# profile/README.md, and commits them here. Nothing else is read and no secret is used: the feed is public
+# and this repository's own token writes the commit. If the feed is unreachable the job fails and the last
+# good picture stays; nothing is drawn that was not read.
+name: cadence
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["cadence/**", ".github/workflows/cadence.yml"]
+
+concurrency:
+  group: cadence
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node cadence/test.mjs
+
+  draw:
+    needs: test
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node cadence/cadence.mjs
+      - name: Commit if the picture changed
+        run: |
+          git add profile/cadence.svg profile/README.md
+          if git diff --cached --quiet; then echo "unchanged"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" commit -m "The build's cadence, read from the public feed"
+          git push
