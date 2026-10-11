@@ -1,0 +1,29 @@
+# Proves the cadence on the organisation's front page is current, from outside the job that draws it.
+#
+# cadence.yml redraws the picture at 06:17 UTC, but a job that fails or never runs leaves the last picture
+# standing and says nothing. This check reads the published page as a visitor does, twice a day, and fails when
+# the page or the picture is more than a day old or the last scheduled redraw did not succeed. Its badge is on
+# the page beside the picture, so a stale page shows red to anyone; a failed run is GitHub's ordinary notice to
+# the owners. It reads only this public repository and GitHub's record of its runs, with this repository's own
+# read-only token: no secret.
+name: cadence current
+
+on:
+  schedule:
+    - cron: "47 7,19 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node cadence/fresh.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

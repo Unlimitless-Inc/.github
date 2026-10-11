@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["cadence/**", ".github/workflows/cadence.yml"]
+    paths: ["cadence/**", ".github/workflows/cadence.yml", ".github/workflows/cadence-fresh.yml"]
 
 concurrency:
   group: cadence
