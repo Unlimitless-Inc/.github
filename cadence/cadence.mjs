@@ -6,13 +6,20 @@
 //
 // What it writes: profile/cadence.svg (one square per day) and the block between the cadence markers in
 // profile/README.md. If the feed is unreachable or not the expected shape, it writes nothing and exits
-// non-zero: the last good picture stays, and nothing is ever drawn that was not read.
+// non-zero: the last good picture stays, and nothing is ever drawn that was not read. A stale page is caught
+// separately by cadence/fresh.mjs, which reads the published page itself.
 import { readFileSync, writeFileSync } from "node:fs";
 
 export const FEED = "https://api.unlimitless.ai/public/build-cadence";
 const START = "<!-- cadence:start -->";
 const END = "<!-- cadence:end -->";
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+// The badge of the separate check that reads this page as a visitor does and goes red when it is more than a day old.
+export const FRESH_NAME = "cadence current";
+export const FRESH_RUNS = "https://github.com/Unlimitless-Inc/.github/actions/workflows/cadence-fresh.yml";
+export const FRESH_BADGE = `${FRESH_RUNS}/badge.svg`;
+/** A read older than this is not drawn: the picture would claim a day it did not read. */
+export const MAX_READ_AGE_MS = 36 * 3600 * 1000;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** The feed's body, checked. Anything else is null, and null draws nothing. */
@@ -91,7 +98,9 @@ export function renderBlock(c) {
     "",
     `![${fmt(c.merged_changes)} changes merged into Unl's main branch, one square per day](https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile/cadence.svg)`,
     "",
-    `<sub>Each change that landed on the main branch of Unl's private engine repository counts once, by UTC day: a merged pull request is one change, however many commits it held. Only these counts and dates leave it; the code stays private. Read ${longDate(c.as_of.slice(0, 10))}. What each change did, in plain words: <a href="https://unlimitless.ai/changelog">the changelog</a>.</sub>`,
+    `[![${FRESH_NAME}](${FRESH_BADGE})](${FRESH_RUNS})`,
+    "",
+    `<sub>Each change that landed on the main branch of Unl's private engine repository counts once, by UTC day: a merged pull request is one change, however many commits it held. Only these counts and dates leave it; the code stays private. Redrawn every day at 06:17 UTC; last read ${longDate(c.as_of.slice(0, 10))}. What each change did, in plain words: <a href="https://unlimitless.ai/changelog">the changelog</a>.</sub>`,
     END,
   ].join("\n");
 }
@@ -107,6 +116,8 @@ async function main() {
   const body = res.ok ? await res.json().catch(() => null) : null;
   const c = validate(body);
   if (!c) { console.error(`cadence: the feed answered ${res.status} without a usable cadence; nothing was drawn`); process.exit(1); }
+  const age = Date.now() - Date.parse(c.as_of);
+  if (age > MAX_READ_AGE_MS) { console.error(`cadence: the feed's read is from ${c.as_of}, more than a day and a half old; nothing was drawn`); process.exit(1); }
   writeFileSync("profile/cadence.svg", renderSvg(c));
   writeFileSync("profile/README.md", spliceReadme(readFileSync("profile/README.md", "utf8"), renderBlock(c)));
   console.log(`cadence: ${c.merged_changes} merged changes, ${c.since} to ${c.through}`);
