@@ -40,8 +40,10 @@ export function verdict({ read, drawn, lastRun }, today) {
   return faults;
 }
 
+// raw.githubusercontent.com serves a cached copy for a few minutes after a commit, so a check started just after
+// the redraw read the old page and went red on 11 Oct (08:18). A query the cache has not seen reads the current file.
 async function text(url) {
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
   return res.ok ? res.text() : null;
 }
 
