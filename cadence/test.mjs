@@ -60,7 +60,7 @@ assert.ok(!/[–—]/.test(block), "no dashes in public words");
 
 // The relay starts each job when it is due and has not run, whoever else started it, and never twice.
 const at = (t) => Date.parse(`2026-10-11T${t}:00Z`);
-const run = (t, event = "workflow_dispatch", status = "completed", conclusion = "success") => ({ created_at: `2026-10-11T${t}:00Z`, event, status, conclusion });
+const run = (t, event = "workflow_dispatch", status = "completed", conclusion = "success", done = t) => ({ created_at: `2026-10-11T${t}:00Z`, updated_at: `2026-10-11T${done}:00Z`, event, status, conclusion });
 assert.deepEqual(due(at("05:00"), [], []), [], "before 06:17 nothing is due");
 assert.deepEqual(due(at("06:20"), [], []), [DRAW.file], "after 06:17 with no run today, the redraw is due");
 assert.deepEqual(due(at("06:20"), [run("06:17", "schedule")], []), [], "a run GitHub's scheduler did start counts");
@@ -74,6 +74,12 @@ assert.deepEqual(due(at("07:50"), [run("06:20")], []), [FRESH.file], "after 07:4
 assert.deepEqual(due(at("07:50"), [run("06:20")], [run("07:48", "schedule")]), [], "the morning check runs once");
 assert.deepEqual(due(at("19:50"), [run("06:20")], [run("07:48")]), [FRESH.file], "after 19:47 it is due again");
 assert.deepEqual(due(at("23:59"), [run("06:20")], [run("07:48"), run("19:50")]), [], "and then not again that day");
-assert.deepEqual(due(at("08:00"), [], []), [DRAW.file, FRESH.file], "a relay that starts late starts both");
+assert.deepEqual(due(at("08:00"), [], []), [DRAW.file], "a relay that starts late starts the redraw first, never the check beside it");
+assert.deepEqual(due(at("08:10"), [run("08:00", "workflow_dispatch", "in_progress", null)], []), [], "the check waits while the redraw runs");
+assert.deepEqual(due(at("08:20"), [run("08:00", "workflow_dispatch", "completed", "success", "08:01")], []), [FRESH.file], "and runs once it has finished");
+const redCheck = run("08:16", "workflow_dispatch", "completed", "failure");
+assert.deepEqual(due(at("08:30"), [run("08:15", "workflow_dispatch", "completed", "success", "08:17")], [redCheck]), [FRESH.file], "a check that went red is asked again once a redraw has succeeded since");
+assert.deepEqual(due(at("08:30"), [run("08:15", "workflow_dispatch", "completed", "success", "08:15")], [redCheck]), [], "but not on a redraw that finished before it, which it already saw");
+assert.deepEqual(due(at("08:40"), [run("08:15", "workflow_dispatch", "completed", "success", "08:17")], [run("08:30"), redCheck]), [], "once green, it is not asked again until the next slot");
 
 console.log("cadence: all checks passed");

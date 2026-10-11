@@ -7,7 +7,8 @@
 // repository's own token is the one start that token is allowed, so no secret is added.
 //
 // Due means: the redraw once a day from 06:17 UTC, tried again (at most three times a day) only when every attempt
-// so far today failed; the freshness check once after each of 07:47 and 19:47 UTC. A run GitHub's scheduler did
+// so far today failed; the freshness check once after each of 07:47 and 19:47 UTC, never while a redraw is due or
+// running, and again when it went red and a redraw has succeeded since. A run GitHub's scheduler did
 // start counts, so the two never double up.
 
 const REPO = "Unlimitless-Inc/.github";
@@ -33,8 +34,16 @@ export function due(now, drawRuns, freshRuns) {
     const settled = today.some((r) => r.status !== "completed" || r.conclusion === "success");
     if (!settled && today.length < DRAW.attempts) out.push(DRAW.file);
   }
+  // The check reads the published page, so it waits while a redraw is due or still running: started together, the
+  // check reads the page before the redraw commits and goes red on a page that is about to be current (11 Oct, 08:16).
+  const drawing = out.includes(DRAW.file) || unattended(drawRuns).some((r) => r.status !== "completed");
   const slot = FRESH.slots.map((s) => slotMs(now, s)).filter((t) => now >= t).pop();
-  if (slot !== undefined && !unattended(freshRuns).some((r) => Date.parse(r.created_at) >= slot)) out.push(FRESH.file);
+  if (slot !== undefined && !drawing) {
+    const [last] = unattended(freshRuns).filter((r) => Date.parse(r.created_at) >= slot).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+    // A red check is asked again once a redraw has succeeded since it started, so a fixed page does not stay red until the next slot.
+    const redrawnSince = (run) => unattended(drawRuns).some((r) => r.conclusion === "success" && Date.parse(r.updated_at ?? r.created_at) > Date.parse(run.created_at));
+    if (!last || (last.status === "completed" && last.conclusion !== "success" && redrawnSince(last))) out.push(FRESH.file);
+  }
   return out;
 }
 
