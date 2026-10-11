@@ -1,0 +1,50 @@
+# relay: starts the daily redraw and the freshness check when they are due, without leaning on GitHub's schedule.
+#
+# Why: cadence.yml asks GitHub's scheduler for 06:17 UTC and cadence-fresh.yml for 07:47 and 19:47, and on a quiet
+# repository GitHub runs schedules a few times a day at best. On 11 October 2026 neither ran, so the front page
+# kept an old date and the check meant to go red never ran to say so.
+#
+# How: one long run asks cadence/relay.mjs every ten minutes what is due, from GitHub's own record of today's runs,
+# then hands on to the next relay before GitHub's six-hour job limit. Starting a workflow is the one thing this
+# repository's own token may do to another workflow, so no secret is added. The concurrency group keeps exactly one
+# relay alive. If it stops, the hourly schedule below restarts it and the two jobs keep their own schedules: both
+# lean on GitHub's scheduler, so they are the fallback, never the cadence. The same pattern runs the status page's
+# checks in Unlimitless-Inc/status.
+name: relay
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "11 * * * *"
+
+concurrency:
+  group: relay
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    # The loop ends at 5h30 on its own, so the hand-on below always runs inside the 6h job limit.
+    timeout-minutes: 350
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Start whatever is due, every ten minutes
+        run: |
+          end=$(( $(date +%s) + 330 * 60 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            node cadence/relay.mjs \
+              || echo "::warning::the relay could not read or start the jobs at $(date -u +%FT%TZ); trying again in ten minutes"
+            sleep 600
+          done
+      - name: Hand on to the next relay
+        if: ${{ !cancelled() }}
+        run: gh workflow run relay.yml --ref main
