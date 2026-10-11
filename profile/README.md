@@ -3,11 +3,13 @@
 Your AI already knows how to reason. Unl gives it your reason.
 
 <!-- cadence:start -->
-**1,930 changes merged** into Unl's main branch since 23 May 2026, on 94 of the 141 days since.
+**1,989 changes merged** into Unl's main branch since 23 May 2026, on 95 of the 142 days since.
 
-![1,930 changes merged into Unl's main branch, one square per day](https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile/cadence.svg)
+![1,989 changes merged into Unl's main branch, one square per day](https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile/cadence.svg)
 
-<sub>Each change that landed on the main branch of Unl's private engine repository counts once, by UTC day: a merged pull request is one change, however many commits it held. Only these counts and dates leave it; the code stays private. Read 10 October 2026. What each change did, in plain words: <a href="https://unlimitless.ai/changelog">the changelog</a>.</sub>
+[![cadence current](https://github.com/Unlimitless-Inc/.github/actions/workflows/cadence-fresh.yml/badge.svg)](https://github.com/Unlimitless-Inc/.github/actions/workflows/cadence-fresh.yml)
+
+<sub>Each change that landed on the main branch of Unl's private engine repository counts once, by UTC day: a merged pull request is one change, however many commits it held. Only these counts and dates leave it; the code stays private. Redrawn every day at 06:17 UTC; last read 11 October 2026. What each change did, in plain words: <a href="https://unlimitless.ai/changelog">the changelog</a>.</sub>
 <!-- cadence:end -->
 
 ## What is open, and what is hosted
