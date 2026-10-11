@@ -2,12 +2,12 @@
 //
 // The daily job (cadence.yml) cannot report its own silence: if it fails, or never runs, the last picture just
 // stays. So this separate check reads the published README and picture, and fails when either is more than a
-// day old or when the latest scheduled redraw did not succeed. Its badge sits beside the picture, so a stale
+// day old or when the latest daily redraw did not succeed. Its badge sits beside the picture, so a stale
 // page shows red to anyone who looks, and a failed run is the ordinary GitHub notice to the repository's owners.
 // It reads only this public repository and GitHub's own record of its runs; no secret is used.
 
 const RAW = "https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile";
-const RUNS = "https://api.github.com/repos/Unlimitless-Inc/.github/actions/workflows/cadence.yml/runs?event=schedule&per_page=1";
+const RUNS = "https://api.github.com/repos/Unlimitless-Inc/.github/actions/workflows/cadence.yml/runs?per_page=30";
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_MS = 864e5;
 
@@ -35,7 +35,7 @@ export function verdict({ read, drawn, lastRun }, today) {
   if (!drawn) faults.push("the picture does not say which day it draws to");
   else if (ageDays(drawn) > 1) faults.push(`the picture draws to ${drawn}, ${ageDays(drawn)} days before ${today}`);
   if (lastRun && lastRun.status === "completed" && lastRun.conclusion !== "success") {
-    faults.push(`the last scheduled redraw (${lastRun.created_at}) ended ${lastRun.conclusion}: ${lastRun.html_url}`);
+    faults.push(`the last daily redraw (${lastRun.created_at}) ended ${lastRun.conclusion}: ${lastRun.html_url}`);
   }
   return faults;
 }
@@ -51,11 +51,12 @@ async function main() {
   if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const runs = await fetch(RUNS, { headers });
   if (!runs.ok) { console.error(`cadence-fresh: GitHub answered ${runs.status} for the run record; the page is not proven current`); process.exit(1); }
-  const lastRun = (await runs.json()).workflow_runs?.[0] ?? null;
+  // The latest redraw nobody pushed: the relay's, GitHub's scheduler's or a hand-started one. A push only tests.
+  const lastRun = (await runs.json()).workflow_runs?.find((r) => r.event !== "push") ?? null;
   const today = new Date().toISOString().slice(0, 10);
   const { read, drawn } = readDates(readme, svg);
   const faults = verdict({ read, drawn, lastRun }, today);
-  console.log(`cadence-fresh: today ${today}; page last read ${read ?? "unknown"}; picture draws to ${drawn ?? "unknown"}; last scheduled redraw ${lastRun ? `${lastRun.created_at} ${lastRun.status} ${lastRun.conclusion ?? ""}`.trim() : "none on record"}`);
+  console.log(`cadence-fresh: today ${today}; page last read ${read ?? "unknown"}; picture draws to ${drawn ?? "unknown"}; last daily redraw ${lastRun ? `${lastRun.created_at} ${lastRun.status} ${lastRun.conclusion ?? ""}`.trim() : "none on record"}`);
   if (faults.length) { for (const f of faults) console.error(`cadence-fresh: STALE: ${f}`); process.exit(1); }
   console.log("cadence-fresh: current");
 }
