@@ -41,6 +41,9 @@ jobs:
         run: |
           end=$(( $(date +%s) + 330 * 60 ))
           while [ "$(date +%s)" -lt "$end" ]; do
+            # Each pass runs main's current rules, so a fix reaches a relay already running within ten minutes.
+            git fetch -q origin main && git checkout -q FETCH_HEAD -- cadence/relay.mjs \
+              || echo "::warning::could not read main's relay rules at $(date -u +%FT%TZ); using the ones already here"
             node cadence/relay.mjs \
               || echo "::warning::the relay could not read or start the jobs at $(date -u +%FT%TZ); trying again in ten minutes"
             sleep 600
