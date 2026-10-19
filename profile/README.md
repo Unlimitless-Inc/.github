@@ -3,9 +3,9 @@
 Your AI already knows how to reason. Unl gives it your reason.
 
 <!-- cadence:start -->
-**2,274 changes merged** into Unl's main branch since 23 May 2026, on 103 of the 150 days since.
+**2,282 changes merged** into Unl's main branch since 23 May 2026, on 103 of the 150 days since.
 
-![2,274 changes merged into Unl's main branch, one square per day](https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile/cadence.svg)
+![2,282 changes merged into Unl's main branch, one square per day](https://raw.githubusercontent.com/Unlimitless-Inc/.github/main/profile/cadence.svg)
 
 [![cadence current](https://github.com/Unlimitless-Inc/.github/actions/workflows/cadence-fresh.yml/badge.svg)](https://github.com/Unlimitless-Inc/.github/actions/workflows/cadence-fresh.yml)
 
